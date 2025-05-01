@@ -5,7 +5,7 @@ hw2/
 ├── config/                # 訓練與模型設定
 │   └── config.yaml
 │
-├── data/                  # 數據讀取與前處理
+├── data_scripts/                  # 數據讀取與前處理
 │   ├── dataset.py
 │   ├── transforms.py      # 圖像轉換（如 torchvision transforms）img轉成tensor
 │   └── preprocess.py      # 資料切割、label encode、tokenize 
