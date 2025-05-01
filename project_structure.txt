@@ -1,0 +1,27 @@
+#GPT推薦 version 1.0
+
+hw2/
+│
+├── config/                # 訓練與模型設定
+│   └── config.yaml
+│
+├── data/                  # 數據讀取與前處理
+│   ├── dataset.py
+│   ├── transforms.py      # 圖像轉換（如 torchvision transforms）img轉成tensor
+│   └── preprocess.py      # 資料切割、label encode、tokenize 
+│
+├── models/                # 模態模型與融合架構
+│   ├── text_encoder.py    # BERT [CLS]
+│   ├── image_encoder.py   # ResNet50
+│   ├── fusion_model.py    # Fusion (concat + MLP)
+│   └── multimodal_net.py  # 整合模態
+│
+├── train.py               # 主訓練流程
+├── evaluate.py            # 驗證與測試
+├── utils/                 # 工具函式（logger, metrics, scheduler）
+│   ├── metrics.py         # MAE, MSE 等
+│   └── logger.py
+│
+└── experiments/           # 模型結果與儲存
+    ├── checkpoints/
+    └── logs/
