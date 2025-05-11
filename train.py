@@ -1,94 +1,7 @@
-# # train.py
-# """
-# 訓練腳本：
-# 載入多模態資料集、模型與損失函數，進行迴圈式訓練與模型儲存。
-# """
-
-# import torch
-# import torch.nn as nn
-# from torch.utils.data import DataLoader
-# from transformers import BertTokenizer
-# from tqdm import tqdm
-# import os
-
-# from data_scripts.dataset import MultimodalDataset
-# from data_scripts.transform import image_transforms
-# from models.multimodal_net import MultimodalNet
-
-# # 裝置設定
-# DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# # 參數
-# BATCH_SIZE = 16
-# EPOCHS = 10
-# LR = 1e-4
-
-# # Tokenizer 載入
-# tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-
-# # 載入訓練資料
-# train_dataset = MultimodalDataset(
-#     csv_path='data/train.csv',
-#     tokenizer=tokenizer,
-#     image_root='data',
-#     transform=image_transforms
-# )
-# train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-
-# # 決定社會特徵維度（假設第一筆就具代表性）
-# social_dim = train_dataset[0]['social'].shape[0]
-
-# # 模型建立
-# model = MultimodalNet(feature_dims=[768, 768, social_dim]).to(DEVICE)
-
-# # 損失與優化器
-# criterion = nn.L1Loss()  # 使用 MAE 作為回歸損失
-# optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-
-# # 儲存路徑
-# os.makedirs('./experiments/checkpoints', exist_ok=True)
-# best_loss = float('inf')
-
-# # 訓練迴圈
-# for epoch in range(EPOCHS):
-#     model.train()
-#     total_loss = 0
-#     pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS}")
-
-#     for batch in pbar:
-#         input_ids = batch['title_input_ids'].to(DEVICE)
-#         attention_mask = batch['title_mask'].to(DEVICE)
-#         images = batch['image'].to(DEVICE)
-#         social = batch['social'].to(DEVICE)
-#         labels = batch['label'].to(DEVICE)
-
-#         optimizer.zero_grad()
-#         outputs = model((input_ids, attention_mask), images, social)
-#         loss = criterion(outputs, labels)
-#         loss.backward()
-#         optimizer.step()
-
-#         total_loss += loss.item()
-#         pbar.set_postfix(loss=loss.item())
-
-#     avg_loss = total_loss / len(train_loader)
-#     print(f"\nEpoch {epoch+1} Average Loss: {avg_loss:.4f}")
-
-#     # 儲存最佳模型
-#     if avg_loss < best_loss:
-#         best_loss = avg_loss
-#         torch.save(model.state_dict(), './experiments/checkpoints/best_model.pt')
-#         print("✅ Saved new best model.")
-
-
-
 # train.py
 """
-上面是舊的訓練腳本，下面是新的訓練腳本
-------
 訓練腳本：
-載入多模態資料集、模型與損失函數，進行訓練與驗證，
-使用 validation loss 決定最佳模型並儲存，並繪製 loss 曲線（含時間戳記版控）。
+使用 BERTopic 向量取代原 tag_encoder，融合多模態資訊進行迴歸任務。
 """
 
 import torch
@@ -104,15 +17,12 @@ from data_scripts.dataset import MultimodalDataset
 from data_scripts.transform import image_transforms
 from models.multimodal_net import MultimodalNet
 
-# 裝置設定
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# 參數
 BATCH_SIZE = 16
-EPOCHS = 30
+EPOCHS = 20
 LR = 1e-4
 VAL_RATIO = 0.1
-EARLY_STOPPING_PATIENCE = 5
+EARLY_STOPPING_PATIENCE = 3
 
 # 時間戳記
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -138,7 +48,8 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 # 模型建立
 social_dim = dataset[0]['social'].shape[0]
-model = MultimodalNet(feature_dims=[768, 768, 768, social_dim]).to(DEVICE)
+topic_dim = dataset[0]['topic'].shape[0]
+model = MultimodalNet(feature_dims=[768, topic_dim, 768, social_dim]).to(DEVICE)
 
 # 損失與優化器
 criterion = nn.L1Loss()
@@ -159,14 +70,13 @@ for epoch in range(EPOCHS):
     for batch in pbar:
         title_ids = batch['title_input_ids'].to(DEVICE)
         title_mask = batch['title_mask'].to(DEVICE)
-        tag_ids = batch['tag_input_ids'].to(DEVICE)
-        tag_mask = batch['tag_mask'].to(DEVICE)
+        topic = batch['topic'].to(DEVICE)
         images = batch['image'].to(DEVICE)
         social = batch['social'].to(DEVICE)
         labels = batch['label'].to(DEVICE)
 
         optimizer.zero_grad()
-        outputs = model((title_ids, title_mask), (tag_ids, tag_mask), images, social)
+        outputs = model((title_ids, title_mask), topic, images, social)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -184,13 +94,12 @@ for epoch in range(EPOCHS):
         for batch in val_loader:
             title_ids = batch['title_input_ids'].to(DEVICE)
             title_mask = batch['title_mask'].to(DEVICE)
-            tag_ids = batch['tag_input_ids'].to(DEVICE)
-            tag_mask = batch['tag_mask'].to(DEVICE)
+            topic = batch['topic'].to(DEVICE)
             images = batch['image'].to(DEVICE)
             social = batch['social'].to(DEVICE)
             labels = batch['label'].to(DEVICE)
 
-            outputs = model((title_ids, title_mask), (tag_ids, tag_mask), images, social)
+            outputs = model((title_ids, title_mask), topic, images, social)
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 

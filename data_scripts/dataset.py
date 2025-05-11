@@ -8,9 +8,7 @@ import os
 class MultimodalDataset(Dataset):
     def __init__(self, csv_path, tokenizer, image_root, transform=None):
         self.df = pd.read_csv(csv_path)
-        # 防呆 🔧 補上空的 Title 和 Alltags 欄位
         self.df['Title'] = self.df['Title'].fillna('None')
-
 
         self.tokenizer = tokenizer
         self.image_root = image_root
@@ -34,15 +32,8 @@ class MultimodalDataset(Dataset):
 
         # One-hot 類別特徵
         social_cols = [col for col in self.df.columns if col.startswith(('Category_', 'Concept_', 'Subcategory_'))]
-        # social_tensor = torch.tensor(row[social_cols].values, dtype=torch.float)
-        # if not social_cols:
-        #     social_tensor = torch.zeros(1)  # 預設 fallback
-        # else:
-        #     social_tensor = torch.tensor(row[social_cols].values, dtype=torch.float)
-
-        # One-hot 類別特徵
         if not social_cols:
-            social_tensor = torch.zeros(1)  # fallback
+            social_tensor = torch.zeros(1)
         else:
             try:
                 values = row[social_cols].astype(float).values
@@ -52,12 +43,15 @@ class MultimodalDataset(Dataset):
                 raise e
             social_tensor = torch.tensor(values, dtype=torch.float)
 
+        # BERTopic 主題特徵
+        topic_cols = [col for col in self.df.columns if col.startswith("Topic_")]
+        if topic_cols:
+            topic_tensor = torch.tensor(row[topic_cols].astype(float).values, dtype=torch.float)
+        else:
+            topic_tensor = torch.zeros(1)  # fallback
 
-
-        # 標籤處理（若有）
-        # label_value = row['label'] if 'label' in row and not pd.isna(row['label']) else 0.0
+        # 標籤處理
         label_value = row['label'] if 'label' in self.df.columns and not pd.isna(row['label']) else 0.0
-
         label = torch.tensor(label_value, dtype=torch.float)
 
         return {
@@ -67,5 +61,6 @@ class MultimodalDataset(Dataset):
             'tag_mask': tag_enc['attention_mask'].squeeze(0),
             'image': image,
             'social': social_tensor,
+            'topic': topic_tensor,
             'label': label
         }
