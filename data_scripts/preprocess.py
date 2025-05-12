@@ -14,6 +14,7 @@ from sklearn.preprocessing import OneHotEncoder
 import pickle
 import os
 from bertopic import BERTopic
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # 載入訓練與測試 JSON（格式為 JSON 陣列）
 with open('./data/train_data.json') as f:
