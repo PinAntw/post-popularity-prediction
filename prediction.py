@@ -17,7 +17,7 @@ from models.multimodal_net import MultimodalNet
 
 # ====== 設定裝置與路徑 ======
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-MODEL_PATH = 'experiments/checkpoints/20250511_115435/best_model.pt'  # ✔ 替換為實際訓練結果路徑
+MODEL_PATH = 'experiments/checkpoints/20250511_234749/best_model.pt'  # ✔ 替換為實際訓練結果路徑
 CSV_PATH = 'data/test.csv'
 IMG_ROOT = 'data'
 OUTPUT_PATH = 'results/predict_result.csv'
