@@ -1,7 +1,7 @@
 # train.py
 """
-訓練腳本：
-使用 BERTopic 向量取代原 tag_encoder，融合多模態資訊進行迴歸任務。
+訓練腳本：融合多模態資訊進行迴歸任務
+模態包括：Title、Hashtag（Topic+Graph）、Image、Social
 """
 
 import torch
@@ -47,9 +47,10 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 # 模型建立
-social_dim = dataset[0]['social'].shape[0]
 topic_dim = dataset[0]['topic'].shape[0]
-model = MultimodalNet(feature_dims=[768, topic_dim, 768, social_dim]).to(DEVICE)
+graph_dim = dataset[0]['graph'].shape[0]
+social_dim = dataset[0]['social'].shape[0]
+model = MultimodalNet(feature_dims=[768, topic_dim + graph_dim, 768, social_dim]).to(DEVICE)
 
 # 損失與優化器
 criterion = nn.L1Loss()
@@ -71,12 +72,14 @@ for epoch in range(EPOCHS):
         title_ids = batch['title_input_ids'].to(DEVICE)
         title_mask = batch['title_mask'].to(DEVICE)
         topic = batch['topic'].to(DEVICE)
+        graph = batch['graph'].to(DEVICE)
+        topic_graph = torch.cat([topic, graph], dim=1)  # 合併 hashtag 表徵
         images = batch['image'].to(DEVICE)
         social = batch['social'].to(DEVICE)
         labels = batch['label'].to(DEVICE)
 
         optimizer.zero_grad()
-        outputs = model((title_ids, title_mask), topic, images, social)
+        outputs = model((title_ids, title_mask), topic_graph, images, social)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -95,11 +98,13 @@ for epoch in range(EPOCHS):
             title_ids = batch['title_input_ids'].to(DEVICE)
             title_mask = batch['title_mask'].to(DEVICE)
             topic = batch['topic'].to(DEVICE)
+            graph = batch['graph'].to(DEVICE)
+            topic_graph = torch.cat([topic, graph], dim=1)
             images = batch['image'].to(DEVICE)
             social = batch['social'].to(DEVICE)
             labels = batch['label'].to(DEVICE)
 
-            outputs = model((title_ids, title_mask), topic, images, social)
+            outputs = model((title_ids, title_mask), topic_graph, images, social)
             loss = criterion(outputs, labels)
             val_loss += loss.item()
 
