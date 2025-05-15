@@ -17,7 +17,7 @@ from models.multimodal_net import MultimodalNet
 
 # ====== 設定裝置與路徑 ======
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-MODEL_PATH = 'experiments/checkpoints/20250512_094259/best_model.pt'  # ✔ 替換為實際訓練結果路徑
+MODEL_PATH = 'experiments/checkpoints/20250515_151016/best_model.pt'  # ✔ 替換為實際訓練結果路徑
 CSV_PATH = 'data/test.csv'
 IMG_ROOT = 'data'
 OUTPUT_PATH = 'results/predict_result.csv'
@@ -38,8 +38,14 @@ test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 # ====== 模型初始化（feature dims: text, topic, image, social） ======
 topic_dim = test_dataset[0]['topic'].shape[0]
 social_dim = test_dataset[0]['social'].shape[0]
-model = MultimodalNet(feature_dims=[768, topic_dim, 768, social_dim]).to(DEVICE)
+graph_dim = test_dataset[0]['graph'].shape[0]
+print(f"✅ test topic_dim: {topic_dim}")
+print(f"✅ test graph_dim: {test_dataset[0]['graph'].shape[0]}")
+print(f"→ total: {topic_dim + graph_dim}")
+
+model = MultimodalNet(feature_dims=[768, topic_dim + graph_dim, 768, social_dim])
 model.load_state_dict(torch.load(MODEL_PATH))
+model.to(DEVICE)
 model.eval()
 
 # ====== 推論流程 ======
@@ -51,10 +57,12 @@ with torch.no_grad():
         title_ids = batch['title_input_ids'].to(DEVICE)
         title_mask = batch['title_mask'].to(DEVICE)
         topic = batch['topic'].to(DEVICE)
+        graph = batch['graph'].to(DEVICE)
+        topic_graph = torch.cat([topic, graph], dim=1) 
         images = batch['image'].to(DEVICE)
         social = batch['social'].to(DEVICE)
 
-        outputs = model((title_ids, title_mask), topic, images, social)
+        outputs = model((title_ids, title_mask), topic_graph, images, social)
         preds.extend(outputs.cpu().numpy())
 
         # 取得對應的 Pid（若 csv 有包含）

@@ -3,7 +3,7 @@ import torch.nn as nn
 from models.text_encoder import TextEncoder
 from models.image_encoder import ImageEncoder
 from models.fusion_model import FusionModel
-from attention import HashtagGuidedAttention
+from models.attention import HashtagGuidedAttention
 
 """
 MultimodalNet：整合多模態子模型（文字編碼器、圖像編碼器、融合層），
@@ -21,6 +21,8 @@ class MultimodalNet(nn.Module):
         self.image_encoder = ImageEncoder()
 
         self.topic_graph_proj = nn.Linear(feature_dims[1], 128)
+        self.social_proj = nn.Linear(feature_dims[3], 6)
+
 
         # Attention 模組（以 topic+graph 為 query）
         self.attn_text = HashtagGuidedAttention(query_dim=128, input_dim=768)
