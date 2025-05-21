@@ -45,6 +45,15 @@ class MultimodalDataset(Dataset):
         # 標籤處理
         label_value = row['label'] if 'label' in self.df.columns and not pd.isna(row['label']) else 0.0
         label = torch.tensor(label_value, dtype=torch.float)
+        # ✅ 檢查 NaN（放在 return 前）
+        if torch.isnan(topic_tensor).any():
+            print(f"❌ topic_tensor NaN @ idx={idx}, Pid={row['Pid']}")
+        if torch.isnan(graph_tensor).any():
+            print(f"❌ graph_tensor NaN @ idx={idx}, Pid={row['Pid']}")
+        if torch.isnan(social_tensor).any():
+            print(f"❌ social_tensor NaN @ idx={idx}, Pid={row['Pid']}")
+        if torch.isnan(label).any():
+            print(f"❌ label NaN @ idx={idx}, Pid={row['Pid']}")
 
         return {
             'title_input_ids': title_enc['input_ids'].squeeze(0),

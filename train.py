@@ -19,10 +19,10 @@ from models.multimodal_net import MultimodalNet
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = 16
-EPOCHS = 20
+EPOCHS = 60
 LR = 1e-4
 VAL_RATIO = 0.1
-EARLY_STOPPING_PATIENCE = 3
+EARLY_STOPPING_PATIENCE = 5
 
 # 時間戳記
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -61,6 +61,16 @@ best_val_loss = float('inf')
 all_train_losses = []
 all_val_losses = []
 patience_counter = 0
+
+# 🔍 檢查模態維度（debug 專用）
+sample = dataset[0]  # 或 test_dataset[0] if you're in prediction.py
+print("🔎 模態輸入維度：")
+print(f"  📘 Title (BERT hidden):     {sample['title_input_ids'].shape[0]} → 768")
+print(f"  🏷️  Topic vector:           {sample['topic'].shape[0]}")
+print(f"  🌐 Graph embedding:         {sample['graph'].shape[0]}")
+print(f"  🖼️  Image feature map:       [49 × 768]")  # 因為 image encoder 輸出的是 (B, 49, 768)
+print(f"  🧬 Social (PCA after OneHot): {sample['social'].shape[0]}")
+print(f"🧩 Topic+Graph concat dim:   {sample['topic'].shape[0] + sample['graph'].shape[0]}")
 
 # 訓練迴圈
 for epoch in range(EPOCHS):
